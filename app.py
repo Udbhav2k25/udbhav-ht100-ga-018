@@ -1,49 +1,56 @@
 import streamlit as st
 from emotion_model import EmotionModel
 from utils import create_emotion_graph
+import nltk
+
+# Download sentence tokenizer (only first time)
+nltk.download('punkt')
 
 # Initialize model
 model = EmotionModel()
 
-st.title(" Chat-Based Emotion Detector")
-st.write("Paste your chat conversation below (one message per line).")
+st.title("🧠 Paragraph & Chat-Based Emotion Analyzer")
+st.write("Paste a paragraph or chat, and the system will detect emotions sentence-by-sentence.")
 
-# Chat input
-chat_history = st.text_area("Chat History:")
+# Input box
+user_text = st.text_area("Enter paragraph or chat here:")
 
-# Analyze button
-if st.button("Analyze Emotion From Chat"):
-    if chat_history.strip() == "":
-        st.warning("Please enter chat messages to analyze.")
+if st.button("Analyze Emotion"):
+    if user_text.strip() == "":
+        st.warning("⚠ Please enter some text to analyze.")
     else:
-        # Split chat into individual messages
-        messages = chat_history.strip().split("\n")
+        # STEP 1: Split text to sentences using NLTK sentence tokenizer
+        sentences = nltk.sent_tokenize(user_text)
+
+        st.subheader("🔍 Sentence-by-Sentence Emotion Analysis")
 
         emotion_scores = []
         emotion_labels = []
 
-        st.subheader(" Message-by-Message Emotion Detection")
-
-        # Analyze every line
-        for i, msg in enumerate(messages):
-            label, probs = model.predict_emotion(msg)
+        for i, sentence in enumerate(sentences):
+            label, probs = model.predict_emotion(sentence)
+            confidence = max(probs.values())
+            emotion_scores.append(confidence)
             emotion_labels.append(label)
-            emotion_scores.append(max(probs.values()))
 
-            st.write(f"**Message {i+1}:** {msg}")
-            st.write(f"Emotion → {label}")
+            st.write(f"**Sentence {i+1}:** {sentence}")
+            st.write(f"Emotion → **{label}** | Confidence: {round(confidence, 2)}")
             st.write("---")
 
-        # Handle single-message chat (to create graph)
+        # Avoid graph error if only one sentence
         if len(emotion_scores) == 1:
             emotion_scores.append(emotion_scores[0])
 
-        # Create graph
+        # Create and display graph
         graph_path = "emotion_plot.png"
         create_emotion_graph(emotion_scores, graph_path)
         st.image(graph_path, caption="📈 Emotion Timeline")
 
-        # Summary (dominant emotion)
-        st.subheader("📝 Chat Mood Summary")
+        # Summary Section
+        st.subheader("📝 Overall Summary")
         dominant = max(set(emotion_labels), key=emotion_labels.count)
-        st.success(f"Dominant Emotion: **{dominant}**")
+        st.success(f"Dominant Emotion Detected: **{dominant}**")
+
+        st.write(
+            "This graph shows how emotional tone changes across each sentence in the input text."
+        )
