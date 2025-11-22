@@ -7,8 +7,17 @@ class EmotionModel:
 
     def __init__(self, model_name: str = "j-hartmann/emotion-english-distilroberta-base"):
         self.model_name = model_name
+        
+        # Load tokenizer & model properly
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name)
+
+        # Force CPU & safe model load
+        self.model = AutoModelForSequenceClassification.from_pretrained(
+            self.model_name,
+            torch_dtype=torch.float32
+        ).to("cpu")
+
+        # Emotion labels in correct model order
         self.labels = [
             "anger", "disgust", "fear", "joy", "neutral", "sadness", "surprise"
         ]
@@ -16,21 +25,25 @@ class EmotionModel:
     def predict_emotion(self, text: str):
         """Return (top_label, probs_dict)"""
         if not text or not text.strip():
-            return "neutral", {k: 0.0 for k in self.labels}
+            return "neutral", {label: 0.0 for label in self.labels}
 
+        # Tokenize input
         inputs = self.tokenizer(
             text,
             return_tensors="pt",
             truncation=True,
             padding=True,
             max_length=256
-        )
+        ).to("cpu")
 
+        # Predict safely (avoid meta tensor)
         with torch.no_grad():
             outputs = self.model(**inputs)
-            probs = torch.nn.functional.softmax(outputs.logits, dim=1).cpu().numpy()[0]
+            logits = outputs.logits.detach().to("cpu")
+            probs = torch.nn.functional.softmax(logits, dim=1).numpy()[0]
 
+        # Convert to readable format
         probs_dict = {label: float(probs[idx]) for idx, label in enumerate(self.labels)}
-        top_label = self.labels[int(probs.argmax())]
+        top_label = self.labels[int(np.argmax(probs))]
 
         return top_label, probs_dict
