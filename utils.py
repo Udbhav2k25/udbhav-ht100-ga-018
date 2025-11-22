@@ -1,23 +1,26 @@
 import matplotlib.pyplot as plt
-import numpy as np
 
-def create_emotion_graph(emotion_scores, output_path="emotion_plot.png"):
+def create_emotion_graph(emotion_labels, output_path="emotion_plot.png"):
     """
-    Create and save a simple emotion confidence timeline graph.
-
-    emotion_scores: list of floats
+    Graph showing categorized emotion timeline (no confidence).
     """
-    if not emotion_scores:
-        raise ValueError("emotion_scores list is empty.")
 
-    x = list(range(1, len(emotion_scores) + 1))
-    y = emotion_scores
+    EMOTIONS = ["anger", "disgust", "fear", "joy", "neutral", "sadness", "surprise"]
 
-    plt.figure(figsize=(8, 4))
-    plt.plot(x, y, marker='o')
+    # Convert emotion labels → numeric positions
+    y_positions = [EMOTIONS.index(label) for label in emotion_labels]
+
+    x = list(range(1, len(emotion_labels) + 1))
+
+    plt.figure(figsize=(12, 5))
+    plt.plot(x, y_positions, marker='o', markersize=10, linewidth=2)
+
+    plt.yticks(range(len(EMOTIONS)), EMOTIONS)
     plt.xlabel("Message Number")
-    plt.ylabel("Emotion Confidence Score")
-    plt.title("Emotion Timeline")
+    plt.ylabel("Emotion")
+    plt.title("Emotion Timeline (Categorical)")
+    plt.grid(True, linestyle="--", alpha=0.3)
     plt.tight_layout()
+
     plt.savefig(output_path)
     plt.close()
